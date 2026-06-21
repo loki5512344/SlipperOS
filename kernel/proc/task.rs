@@ -30,7 +30,7 @@ pub struct Task {
 }
 
 impl Task {
-    pub fn new(id: usize, entry: fn(), stack: &'static mut [u8]) -> Self {
+    pub fn new(id: usize, entry: unsafe fn(), stack: &'static mut [u8]) -> Self {
         let sp = stack.as_mut_ptr() as usize + stack.len();
         Task {
             id,

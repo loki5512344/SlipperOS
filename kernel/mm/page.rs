@@ -3,7 +3,7 @@ use core::ptr::null_mut;
 const PAGE_SIZE: usize = 4096;
 const PAGE_FRAMES: usize = 32768;
 
-extern "C" {
+unsafe extern "C" {
     static _end: u8;
 }
 

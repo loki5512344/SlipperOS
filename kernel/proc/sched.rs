@@ -1,7 +1,7 @@
 use super::task::{Task, TaskState, TASK_STACKS, TASKS, CURRENT, MAX_TASKS};
 
 pub fn sched_init() {
-    extern "Rust" {
+    unsafe extern "Rust" {
         fn sched_idle();
     }
     let stack = unsafe { &mut TASK_STACKS[0] };

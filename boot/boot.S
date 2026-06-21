@@ -2,9 +2,7 @@
 .globl _start
 
 _start:
-    csrr    t0, mhartid
-    li      t1, 0
-    bne     t0, t1, _hang
+    bnez    a0, _hang
 
     la      t0, _sbss
     la      t1, _ebss

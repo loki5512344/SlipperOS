@@ -16,7 +16,7 @@ pub fn shell_start() -> ! {
 }
 
 fn print_prompt() {
-    let mut u = crate::drivers::uart::Uart::new();
+    let mut u = crate::drivers::uart::Uart::new(crate::drivers::uart::uart_base());
     let _ = write!(u, "{}", PROMPT);
 }
 
@@ -33,25 +33,7 @@ fn read_line() -> Option<&'static str> {
                         }
                         INPUT_BUF[INPUT_LEN] = 0;
                         INPUT_LEN = 0;
-                        let s = core::str::from_utf8(&INPUT_BUF[..INPUT_LEN]);
-                        // rebuild s after resetting INPUT_LEN — store result first
-                        let result = match s {
-                            Ok(..) => {
-                                let len = INPUT_BUF.iter().position(|&x| x == 0).unwrap_or(BUF_SIZE);
-                                let slice = core::str::from_utf8(&INPUT_BUF[..len]).unwrap_or("");
-                                slice
-                            }
-                            Err(..) => "",
-                        };
-                        INPUT_LEN = 0;
-                        return if result.is_empty() { None } else {
-                            // We need to return the string
-                            // Use a simple approach: parse now, execute inline
-                            let len = INPUT_BUF.iter().position(|&x| x == 0).unwrap_or(BUF_SIZE);
-                            let slice = core::str::from_utf8(&INPUT_BUF[..len]).unwrap_or("");
-                            // Can't return reference to static, so execute inline
-                            return None; // fallback
-                        };
+                        return None;
                     }
                     c => {
                         if INPUT_LEN < BUF_SIZE - 1 {
@@ -71,12 +53,16 @@ fn exec_cmd(cmd: &str) {
     if cmd.is_empty() {
         return;
     }
-    let parts: Vec<&str> = cmd.split_whitespace().collect();
-    match parts[0] {
+    let mut words = cmd.split_whitespace();
+    let first = match words.next() {
+        Some(w) => w,
+        None => return,
+    };
+    match first {
         "help" => cmd_help(),
         "mem" => cmd_mem(),
         "tasks" => cmd_tasks(),
-        "echo" => cmd_echo(&parts[1..]),
+        "echo" => cmd_echo(words),
         "reboot" => cmd_reboot(),
         "panic" => cmd_panic(),
         "seal" => cmd_seal(),
@@ -85,35 +71,30 @@ fn exec_cmd(cmd: &str) {
 }
 
 fn cmd_help() {
-    use core::fmt::Write;
-    let mut u = crate::drivers::uart::Uart::new();
+    let mut u = crate::drivers::uart::Uart::new(crate::drivers::uart::uart_base());
     let _ = write!(u, "commands: help, mem, tasks, echo, reboot, panic, seal\n");
 }
 
 fn cmd_mem() {
-    use core::fmt::Write;
-    let mut u = crate::drivers::uart::Uart::new();
+    let mut u = crate::drivers::uart::Uart::new(crate::drivers::uart::uart_base());
     let _ = write!(u, "memory: 128MB free (bump + page allocator)\n");
 }
 
 fn cmd_tasks() {
-    use core::fmt::Write;
-    let mut u = crate::drivers::uart::Uart::new();
+    let mut u = crate::drivers::uart::Uart::new(crate::drivers::uart::uart_base());
     let _ = write!(u, "tasks: 1 running (slip shell)\n");
 }
 
-fn cmd_echo(args: &[&str]) {
-    use core::fmt::Write;
-    let mut u = crate::drivers::uart::Uart::new();
-    for arg in args {
+fn cmd_echo<'a>(words: impl Iterator<Item = &'a str>) {
+    let mut u = crate::drivers::uart::Uart::new(crate::drivers::uart::uart_base());
+    for arg in words {
         let _ = write!(u, "{} ", arg);
     }
     let _ = write!(u, "\n");
 }
 
 fn cmd_reboot() {
-    use core::fmt::Write;
-    let mut u = crate::drivers::uart::Uart::new();
+    let mut u = crate::drivers::uart::Uart::new(crate::drivers::uart::uart_base());
     let _ = write!(u, "rebooting...\n");
     unsafe {
         riscv::asm::wfi();
@@ -126,8 +107,7 @@ fn cmd_panic() {
 }
 
 fn cmd_seal() {
-    use core::fmt::Write;
-    let mut u = crate::drivers::uart::Uart::new();
+    let mut u = crate::drivers::uart::Uart::new(crate::drivers::uart::uart_base());
     let seal = "\
         ⠴⠋⠉⠙⠦
        ⠾     ⠷
@@ -158,7 +138,6 @@ fn cmd_seal() {
 }
 
 fn cmd_unknown(cmd: &str) {
-    use core::fmt::Write;
-    let mut u = crate::drivers::uart::Uart::new();
+    let mut u = crate::drivers::uart::Uart::new(crate::drivers::uart::uart_base());
     let _ = write!(u, "unknown command: {cmd}\n");
 }
