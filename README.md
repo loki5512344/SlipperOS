@@ -1,4 +1,4 @@
-# SlipperOS
+# SlipperOS!
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Arch: RISC-V 64](https://img.shields.io/badge/arch-RISCV64-green)](https://riscv.org)
