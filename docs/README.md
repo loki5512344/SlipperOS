@@ -1,4 +1,4 @@
-# Документация Slipper
+# Документация Onyx
 
 Проект состоит из трёх компонентов. Документация описывает каждый из них.
 
@@ -10,7 +10,7 @@ docs/
 ├── dev/             — разработка: сборка, отладка, contributing
 ├── hardware/        — железо: UART, CLINT, PLIC, VirtIO
 ├── internals/       — внутренности: coding style, panic policy
-├── kernel/          — ядро SlipperKernel: прерывания, mm, proc
+├── kernel/          — ядро OnyxKernel: прерывания, mm, proc
 ├── lore/            — история, философия
 ├── shell/           — slip shell: команды, внутренности
 └── README.md        — этот файл
@@ -22,19 +22,19 @@ docs/
 |--------|---------|-----------|
 | `architecture/` | Как всё работает вместе | Все |
 | `dev/` | Разработка и план | Все |
-| `hardware/` | Драйверы устройств | SlipperKernel |
-| `internals/` | Соглашения и политики | SlipperKernel |
-| `kernel/` | Внутренности ядра | SlipperKernel |
-| `shell/` | Slip shell | SlipperKernel |
-| `lore/` | Почему Slipper | Проект в целом |
+| `hardware/` | Драйверы устройств | OnyxKernel |
+| `internals/` | Соглашения и политики | OnyxKernel |
+| `kernel/` | Внутренности ядра | OnyxKernel |
+| `shell/` | Slip shell | OnyxKernel |
+| `lore/` | Почему Onyx | Проект в целом |
 
 ## Репозитории
 
 | Компонент | Репозиторий |
 |-----------|------------|
-| SlipperBoot | https://github.com/loki5512344/SlipperBoot |
-| SlipperKernel | https://github.com/loki5512344/SlipperKernel |
-| SlipperOS | (корень — этот репозиторий) |
+| OnyxBoot | https://github.com/loki5512344/OnyxBoot |
+| OnyxKernel | https://github.com/loki5512344/OnyxKernel |
+| OnyxOS | (корень — этот репозиторий) |
 
 ## План
 
