@@ -21,6 +21,10 @@ nav .dir:first-child{margin-top:0}
 nav .home{margin-bottom:8px;border-bottom:1px solid #30363d;padding-bottom:6px}
 nav .home a{font-weight:600;font-size:14px}
 nav .home a::before{content:"\2302  ";color:#8b949e}
+.lang-switch{text-align:center;margin:12px 0;padding:8px;border-top:1px solid #30363d;border-bottom:1px solid #30363d}
+.lang-switch a{display:inline-block;padding:4px 12px;border-radius:6px;font-size:13px;font-weight:600;text-decoration:none;color:#8b949e;border:1px solid #30363d}
+.lang-switch a:hover{background:#1f6feb33;color:#f0f6fc;border-color:#58a6ff}
+.lang-switch a.active{background:#1f6feb33;color:#f0f6fc;border-color:#58a6ff}
 main{flex:1;padding:40px;max-width:960px;line-height:1.7;overflow-y:auto}
 main h1{font-size:32px;border-bottom:1px solid #30363d;padding-bottom:8px;margin-bottom:16px}
 main h2{font-size:24px;margin-top:24px;margin-bottom:8px}
@@ -49,6 +53,7 @@ CSS
 label_of() {
   local name="$1"
   name="${name##*/}"; name="${name%.md}"
+  name="${name%.en}"
   name="$(echo "$name" | sed 's/_/ /g; s/-/ /g; s/\b\(.\)/\u\1/g')"
   echo "$name"
 }
@@ -71,7 +76,6 @@ relpath() {
   echo "${result:-.}"
 }
 
-# Preprocess GFM tables and replace em-dashes before cmark
 md_to_html() {
   local file="$1"
   sed 's/—/-/g' "$file" | awk '
@@ -146,16 +150,33 @@ md_to_html() {
 }
 
 build_sidebar() {
-  local active_rel="$1"
-  local home_href="$(relpath "${active_rel%.md}" "")"
+  local active_base="$1"
+  local lang="$2"
+
+  local suffix="" find_pat="*.md" exclude="*.en.md" out_ext=".html"
+  local home_href="$(relpath "$active_base" "")"
   [[ "$home_href" == "." ]] && home_href="."
   local home_cls=""
-  [[ -z "$active_rel" || "$active_rel" == "README" ]] && home_cls=' class="active"'
-  echo "<li class=\"home\"><a href=\"${home_href}\"${home_cls}>Home</a></li>"
+  [[ -z "$active_base" || "$active_base" == "README" ]] && home_cls=' class="active"'
+  local result="<li class=\"home\"><a href=\"${home_href}\"${home_cls}>Home</a></li>"
+
+  if [[ "$lang" == "en" ]]; then
+    suffix=".en"
+    find_pat="*.en.md"
+    out_ext=".en.html"
+  fi
+
   local current_tld="" current_sub=""
-  for f in $(find "$ROOT" -name '*.md' | sort); do
+  while IFS= read -r -d '' f; do
     local rel="${f#$ROOT/}"
-    [[ "$rel" == "README.md" ]] && continue
+    local base="${rel%.md}"
+    if [[ "$lang" == "ru" ]]; then
+      base="${base}"  # strip .md already
+    else
+      base="${base%.en}"  # strip .en suffix
+    fi
+    [[ "$base" == "README" ]] && continue
+
     local parts="${rel%/*}"
     [[ "$parts" == "$rel" ]] && parts=""
 
@@ -166,7 +187,7 @@ build_sidebar() {
     if [[ "$tld" != "$current_tld" ]]; then
       current_tld="$tld"; current_sub=""
       local dir_label="$(label_of "$tld")"
-      echo "<div class=\"dir\">${dir_label}</div>"
+      result="$result<div class=\"dir\">${dir_label}</div>"
     fi
 
     local indent=""
@@ -174,18 +195,52 @@ build_sidebar() {
       current_sub="$sub"
       indent="&nbsp;&nbsp;"
     fi
-    if [[ "${rel%%.md}" =~ / && -n "${rel%/*}" ]]; then
+    if [[ "$rel" =~ / && -n "${rel%/*}" ]]; then
       local depth="${rel//[^\/]}"
       indent=""
       for ((i=0; i<${#depth}; i++)); do indent="${indent}&nbsp;&nbsp;"; done
     fi
 
-    local name="$(label_of "$rel")"
-    local href="$(relpath "${active_rel%.md}" "${rel%.md}").html"
+    local name="$(label_of "$base")"
+    local href="$(relpath "$active_base" "$base")${out_ext}"
     local cls=""
-    [[ "${rel%.md}" == "${active_rel%.md}" ]] && cls=' class="active"'
-    echo "<li><a href=\"${href}\"${cls}>${indent}${name}</a></li>"
-  done
+    [[ "$base" == "$active_base" ]] && cls=' class="active"'
+    result="$result<li><a href=\"${href}\"${cls}>${indent}${name}</a></li>"
+  done < <(if [[ "$lang" == "en" ]]; then
+    find "$ROOT" -name "$find_pat" -print0 | sort -z
+  else
+    find "$ROOT" -name "$find_pat" ! -name "$exclude" -print0 | sort -z
+  fi)
+
+  echo "$result"
+}
+
+build_lang_switch() {
+  local active_base="$1"
+  local current_lang="$2"
+
+  local ru_href en_href
+  if [[ -z "$active_base" ]]; then
+    ru_href="index.html"
+    en_href="index.en.html"
+  else
+    ru_href="$(relpath "$active_base" "$active_base").html"
+    en_href="$(relpath "$active_base" "$active_base").en.html"
+  fi
+
+  local ru_cls="" en_cls=""
+  if [[ "$current_lang" == "ru" ]]; then
+    ru_cls=' class="active"'
+  else
+    en_cls=' class="active"'
+  fi
+
+  cat <<EOF
+<div class="lang-switch">
+  <a href="${ru_href}"${ru_cls}>RU</a>
+  <a href="${en_href}"${en_cls}>EN</a>
+</div>
+EOF
 }
 
 build_breadcrumb() {
@@ -196,13 +251,13 @@ build_breadcrumb() {
     local label="$(label_of "$seg")"
     parts="$parts / ${label}"
   done
-  local home="$(relpath "${rel%.md}" "")"
+  local home="$(relpath "${rel}" "")"
   [[ "$home" == "." ]] && home="."
   echo '<div class="breadcrumb"><a href="'"${home}"'">Docs</a> <span>'"${parts}"'</span></div>'
 }
 
 wrap_page() {
-  local title="$1" sidebar="$2" breadcrumb="$3" content="$4"
+  local title="$1" sidebar="$2" breadcrumb="$3" content="$4" lang_switch="$5"
   cat <<EOF
 <!DOCTYPE html>
 <html lang="en">
@@ -213,7 +268,7 @@ wrap_page() {
 <style>${CSS}</style>
 </head>
 <body>
-<nav><h2>SlipperOS Docs</h2><ul>${sidebar}</ul></nav>
+<nav><h2>SlipperOS Docs</h2><ul>${sidebar}</ul>${lang_switch}</nav>
 <main>${breadcrumb}${content}</main>
 </body>
 </html>
@@ -222,34 +277,71 @@ EOF
 
 echo "Generating docs..."
 
-find "$ROOT" -name '*.html' ! -name 'index.html' -delete
+find "$ROOT" -name '*.html' ! -name 'index.html' ! -name 'index.en.html' -delete
 
-declare -a ALL_ENTRIES=()
+# ---- RU pass (.md → .html) ----
+echo "--- Russian ---"
+declare -a RU_ENTRIES=()
 while IFS= read -r -d '' e; do
-  ALL_ENTRIES+=("${e#$ROOT/}")
-done < <(find "$ROOT" -name '*.md' -print0 | sort -z)
+  RU_ENTRIES+=("${e#$ROOT/}")
+done < <(find "$ROOT" -name '*.md' ! -name '*.en.md' -print0 | sort -z)
 
-for rel in "${ALL_ENTRIES[@]}"; do
+for rel in "${RU_ENTRIES[@]}"; do
   md="$ROOT/$rel"
-  name="$(label_of "$rel")"
+  base="${rel%.md}"
+  name="$(label_of "$base")"
   content="$(md_to_html "$md")"
-  sidebar="$(build_sidebar "${rel%.md}")"
-  breadcrumb="$(build_breadcrumb "${rel%.md}")"
-  html="$(wrap_page "SlipperOS - ${name}" "$sidebar" "$breadcrumb" "$content")"
+  sidebar="$(build_sidebar "$base" "ru")"
+  lang_switch="$(build_lang_switch "$base" "ru")"
+  breadcrumb="$(build_breadcrumb "$base")"
+  html="$(wrap_page "SlipperOS - ${name}" "$sidebar" "$breadcrumb" "$content" "$lang_switch")"
   out="${md%.md}.html"
   echo "$html" > "$out"
   echo "  ${rel} -> ${rel%.md}.html"
 done
 
+# ---- EN pass (.en.md → .en.html) ----
+echo "--- English ---"
+declare -a EN_ENTRIES=()
+while IFS= read -r -d '' e; do
+  EN_ENTRIES+=("${e#$ROOT/}")
+done < <(find "$ROOT" -name '*.en.md' -print0 | sort -z)
+
+for rel in "${EN_ENTRIES[@]}"; do
+  md="$ROOT/$rel"
+  base="${rel%.en.md}"
+  name="$(label_of "$base")"
+  content="$(md_to_html "$md")"
+  sidebar="$(build_sidebar "$base" "en")"
+  lang_switch="$(build_lang_switch "$base" "en")"
+  breadcrumb="$(build_breadcrumb "$base")"
+  html="$(wrap_page "SlipperOS - ${name}" "$sidebar" "$breadcrumb" "$content" "$lang_switch")"
+  out="${md%.en.md}.en.html"
+  echo "$html" > "$out"
+  echo "  ${rel} -> ${rel%.en.md}.en.html"
+done
+
+# ---- index (RU) ----
 readme_content="$(md_to_html "$SCRIPT_DIR/README.md")"
-# Fix relative paths when root README is served from docs/
 readme_content="$(echo "$readme_content" | sed 's|href="LICENSE"|href="../LICENSE"|g')"
-# Fix docs/ prefix duplication — paths like docs/foo become foo since we're inside docs/
 readme_content="$(echo "$readme_content" | sed 's|href="docs/|href="|g')"
-idx_sidebar="$(build_sidebar "")"
-idx_html="$(wrap_page "$TITLE" "$idx_sidebar" "" "$readme_content")"
+idx_sidebar="$(build_sidebar "" "ru")"
+idx_lang_switch="$(build_lang_switch "" "ru")"
+idx_html="$(wrap_page "$TITLE" "$idx_sidebar" "" "$readme_content" "$idx_lang_switch")"
 echo "$idx_html" > "$ROOT/index.html"
 echo "  index.html"
 
+# ---- index (EN) ----
+if [[ -f "$SCRIPT_DIR/README.en.md" ]]; then
+  readme_en_content="$(md_to_html "$SCRIPT_DIR/README.en.md")"
+  readme_en_content="$(echo "$readme_en_content" | sed 's|href="LICENSE"|href="../LICENSE"|g')"
+  readme_en_content="$(echo "$readme_en_content" | sed 's|href="docs/|href="|g')"
+  idx_en_sidebar="$(build_sidebar "" "en")"
+  idx_en_lang_switch="$(build_lang_switch "" "en")"
+  idx_en_html="$(wrap_page "$TITLE" "$idx_en_sidebar" "" "$readme_en_content" "$idx_en_lang_switch")"
+  echo "$idx_en_html" > "$ROOT/index.en.html"
+  echo "  index.en.html"
+fi
+
 echo ""
-echo "Done. ${#ALL_ENTRIES[@]} pages + index.html"
+echo "Done. ${#RU_ENTRIES[@]} RU pages + ${#EN_ENTRIES[@]} EN pages + index.html + index.en.html"
