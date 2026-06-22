@@ -6,9 +6,9 @@
 Мы увидели мод "oc2r" на 1 20 1 forge и решили сначало сделать просто дистрибутив для него
 но потом решили сделать более низкоуровневые вещи
 
-мы пишем загрузчик SlipperBoot (https://github.com/loki5512344/SlipperBoot)
+# мы пишем загрузчик SlipperBoot (https://github.com/loki5512344/SlipperBoot)
 
-а так же отдельно ядро SlipperKernel (https://github.com/loki5512344/SlipperKernel.git)
+# а так же отдельно ядро SlipperKernel (https://github.com/loki5512344/SlipperKernel.git)
 
 сама SlipperOS это смесь загрузчика , ядра и встроенных программ с драйверами для базовой работы
 
